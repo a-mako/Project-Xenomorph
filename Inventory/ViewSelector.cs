@@ -5,7 +5,7 @@ using UnityEngine.EventSystems;
 
 public class ViewSelector : MonoBehaviour
 {
-    [SerializeField] private float speed = 25f;
+    [SerializeField] private float speed = 35f;
     private RectTransform rectTransform;
     private GameObject selected;
 

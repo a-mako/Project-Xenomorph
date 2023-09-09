@@ -74,4 +74,8 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 
+#.cs meta files
+*.meta
+*.cs.meta
+
 # End of https://www.toptal.com/developers/gitignore/api/unity
