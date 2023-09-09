@@ -11,7 +11,6 @@ using UnityEditor.ShaderKeywordFilter;
 
 public class InventoryViewController : MonoBehaviour
 {
-    [SerializeField] private ViewSelector selector;
     [SerializeField] private GameObject inventoryViewObject;
     [SerializeField] private GameObject contextMenuObject;
     [SerializeField] private GameObject firstContextMenuOption;
@@ -44,6 +43,8 @@ public class InventoryViewController : MonoBehaviour
         if (currentSlot.itemData.Type == ItemData.ItemType.Consumable) {
             currentSlot.itemData = null;
         }
+        itemNameText.SetText("");
+        itemDescriptionText.SetText("");
         state = State.menuClosed;
         EventSystem.current.SetSelectedGameObject(null);
         foreach (var button in contextMenuIgnore) {
@@ -51,7 +52,6 @@ public class InventoryViewController : MonoBehaviour
         }
     }
     public void OnSlotSelected(ItemSlot selectedSlot) {
-        selector.gameObject.SetActive(true);
         currentSlot = selectedSlot;
         if (selectedSlot.itemData == null) {
             itemNameText.ClearMesh();
@@ -82,16 +82,18 @@ public class InventoryViewController : MonoBehaviour
     private void Update() {
         if (Input.GetKeyDown(KeyCode.Tab)) {
             if (state == State.menuClosed) {
-                selector.gameObject.SetActive(false);
                 EventBus.Instance.PauseGameplay();
                 fader.FadeToBlack(0.3f, FadeToMenuCallback);
+                EventSystem.current.SetSelectedGameObject(itemSlots[0].gameObject);
+                OnSlotSelected(itemSlots[0]);
                 state = State.menuOpen;
-                EventSystem.current.SetSelectedGameObject(null);
             }
             else if (state == State.menuOpen) {
                 fader.FadeToBlack(0.3f, FadeFromMenuCallback);
                 state = State.menuClosed;
                 currentSlot = null;
+                itemNameText.SetText("");
+                itemDescriptionText.SetText("");
             }
             else if (state == State.contextMenu) {
                 contextMenuObject.SetActive(false);
