@@ -14,6 +14,7 @@ public class InventoryViewController : MonoBehaviour
     [SerializeField] private GameObject inventoryViewObject;
     [SerializeField] private GameObject contextMenuObject;
     [SerializeField] private GameObject firstContextMenuOption;
+    [SerializeField] private GameObject currentButton;
     [SerializeField] private TMP_Text itemNameText;
     [SerializeField] private TMP_Text itemDescriptionText;
     [SerializeField] private List<ItemSlot> itemSlots;
@@ -21,7 +22,7 @@ public class InventoryViewController : MonoBehaviour
     [SerializeField] private ScreenFader fader;
     [SerializeField] private List<Button> contextMenuIgnore;
     private Button itemSlotButton;
-    private Color itemSlotButtonDisabledColor;
+    private Color itemSlotButtonDisabledColor = new Color(0.784f, 0.784f, 0.784f, 0.502f);
 
     private enum State {
         menuClosed,
@@ -45,6 +46,32 @@ public class InventoryViewController : MonoBehaviour
         itemNameText.SetText("");
         itemDescriptionText.SetText("");
     }
+
+    public void OpenContextMenu() {
+        if (EventSystem.current.currentSelectedGameObject.TryGetComponent<ItemSlot> (out var slot)) {
+            if (currentSlot.itemData != null) {
+                state = State.contextMenu;
+                Debug.Log("Open Context Menu");
+                contextMenuObject.SetActive(true);
+                ButtonColorToSelected(Color.red);
+                // EventSystem.current.SetSelectedGameObject(firstContextMenuOption);
+                foreach (var button in contextMenuIgnore) {
+                    button.interactable = false;
+                }
+            }
+        }
+    }
+    public void CloseContextMenu()
+    {
+        contextMenuObject.SetActive(false);
+        foreach (var button in contextMenuIgnore) {
+                button.interactable = true;
+        }
+        EventSystem.current.SetSelectedGameObject(currentSlot.gameObject);
+        ButtonColorToUnselected(itemSlotButtonDisabledColor);
+        state = State.menuOpen;
+    }
+
     public void UseItem() {
         fader.FadeToBlack(1f, FadeToUseItemCallback);
         
@@ -70,7 +97,6 @@ public class InventoryViewController : MonoBehaviour
     public void OnSlotSelected(ItemSlot selectedSlot) {
         currentSlot = selectedSlot;
         itemSlotButton = currentSlot.gameObject.GetComponent<Button>();
-        itemSlotButtonDisabledColor = itemSlotButton.colors.disabledColor;
         if (selectedSlot.itemData == null) {
             itemNameText.ClearMesh();
             itemDescriptionText.ClearMesh();
@@ -86,6 +112,7 @@ public class InventoryViewController : MonoBehaviour
     private void OnDisable() {
         EventBus.Instance.onPickUpItem -= OnItemPickedUp;
     }
+
     private void OnItemPickedUp(ItemData itemData)
     {
         foreach (var slot in itemSlots) {
@@ -95,57 +122,7 @@ public class InventoryViewController : MonoBehaviour
             }
         }
     }
-    private void Update() {
-        if (Input.GetKeyDown(KeyCode.Tab)) {
-            if (state == State.menuClosed) {
-                OpenMenu();
-            }
-            else if (state == State.menuOpen) {
-                CloseMenu();
-            }
-            else if (state == State.contextMenu) {
-                contextMenuObject.SetActive(false);
-                foreach (var button in contextMenuIgnore) {
-                        button.interactable = true;
-                }
-                ButtonColorToUnselected(itemSlotButtonDisabledColor);
-                EventSystem.current.SetSelectedGameObject(currentSlot.gameObject);
-                state = State.menuOpen;
-            }
-        }
 
-        if (Input.GetButtonDown("Cancel")) {
-            if (state == State.menuOpen) {
-                CloseMenu();
-
-            }
-            else if (state == State.contextMenu) {
-                contextMenuObject.SetActive(false);
-                    foreach (var button in contextMenuIgnore) {
-                            button.interactable = true;
-                    }
-                    EventSystem.current.SetSelectedGameObject(currentSlot.gameObject);
-                    state = State.menuOpen;
-            }
-        }
-
-        // Open Context Menu
-        if (Input.GetButtonDown("Submit")) {
-            if (state == State.menuOpen) {
-                if (EventSystem.current.currentSelectedGameObject.TryGetComponent<ItemSlot> (out var slot)) {
-                    if (currentSlot.itemData != null) {
-                        state = State.contextMenu;
-                        contextMenuObject.SetActive(true);
-                        ButtonColorToSelected(Color.red);
-                        EventSystem.current.SetSelectedGameObject(firstContextMenuOption);
-                        foreach (var button in contextMenuIgnore) {
-                            button.interactable = false;
-                        }
-                    }
-                }
-            }
-        }
-    }
     private void ButtonColorToSelected(Color color)
     {
         var itemSlotButtonColor = itemSlotButton.colors;
@@ -158,6 +135,7 @@ public class InventoryViewController : MonoBehaviour
         itemSlotButtonColor.disabledColor = color;
         itemSlotButton.colors = itemSlotButtonColor;
     }
+
     private void FadeToMenuCallback() {
         inventoryViewObject.SetActive(true);
         fader.FadeFromBlack(0.3f, null);
@@ -165,5 +143,44 @@ public class InventoryViewController : MonoBehaviour
     private void FadeFromMenuCallback() {
         inventoryViewObject.SetActive(false);
         fader.FadeFromBlack(0.3f, EventBus.Instance.ResumeGameplay);
+    }
+
+    private void Update() {
+        if (Input.GetKeyDown(KeyCode.Tab)) {
+            if (state == State.menuClosed) {
+                OpenMenu();
+            }
+            else if (state == State.menuOpen) {
+                CloseMenu();
+            }
+            else if (state == State.contextMenu) {
+                CloseContextMenu();
+            }
+        }
+
+        else if (state == State.menuOpen) {
+            if (EventSystem.current.currentSelectedGameObject) {
+                currentButton = EventSystem.current.currentSelectedGameObject;
+            }
+            if (Input.GetButtonDown("Submit")) {
+                if (EventSystem.current.currentSelectedGameObject == null) {
+                    Debug.Log("currentSelectedGameObject is null");
+                    EventSystem.current.SetSelectedGameObject(currentButton);
+                }
+                if (currentButton.name == "Esc Button") {
+                    CloseMenu();
+                }
+                OpenContextMenu();
+            }
+            else if (Input.GetButtonDown("Cancel")) {
+                if (state == State.menuOpen) {
+                    CloseMenu();
+
+                }
+                else if (state == State.contextMenu) {
+                    CloseContextMenu();
+                }
+            }
+        }
     }
 }
