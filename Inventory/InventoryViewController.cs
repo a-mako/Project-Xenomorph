@@ -13,14 +13,15 @@ public class InventoryViewController : MonoBehaviour
 {
     [SerializeField] private GameObject inventoryViewObject;
     [SerializeField] private GameObject contextMenuObject;
-    [SerializeField] private GameObject firstContextMenuOption;
     [SerializeField] private GameObject currentButton;
     [SerializeField] private TMP_Text itemNameText;
     [SerializeField] private TMP_Text itemDescriptionText;
-    [SerializeField] private List<ItemSlot> itemSlots;
     [SerializeField] private ItemSlot currentSlot;
     [SerializeField] private ScreenFader fader;
+    [SerializeField] private Camera playerSelfieCamera;
+    [SerializeField] private List<ItemSlot> itemSlots;
     [SerializeField] private List<Button> contextMenuIgnore;
+    [SerializeField] private List<Button> contextMenuButtons;
     private Button itemSlotButton;
     private Color itemSlotButtonDisabledColor = new Color(0.784f, 0.784f, 0.784f, 0.502f);
 
@@ -35,16 +36,20 @@ public class InventoryViewController : MonoBehaviour
     public void OpenMenu() {
         EventBus.Instance.PauseGameplay();
         fader.FadeToBlack(0.3f, FadeToMenuCallback);
+        playerSelfieCamera.gameObject.SetActive(true);
         EventSystem.current.SetSelectedGameObject(itemSlots[0].gameObject);
         OnSlotSelected(itemSlots[0]);
         state = State.menuOpen;
     }
     public void CloseMenu() {
+        Cursor.visible = false;
         fader.FadeToBlack(0.3f, FadeFromMenuCallback);
+        playerSelfieCamera.gameObject.SetActive(false);
         state = State.menuClosed;
         currentSlot = null;
         itemNameText.SetText("");
         itemDescriptionText.SetText("");
+        Cursor.lockState = CursorLockMode.None;
     }
 
     public void OpenContextMenu() {
@@ -54,13 +59,54 @@ public class InventoryViewController : MonoBehaviour
                 Debug.Log("Open Context Menu");
                 contextMenuObject.SetActive(true);
                 ButtonColorToSelected(Color.red);
-                // EventSystem.current.SetSelectedGameObject(firstContextMenuOption);
                 foreach (var button in contextMenuIgnore) {
+                    button.interactable = false;
+                }
+                EnableDisableContextMenuOptions();
+            }
+        }
+    }
+
+    private void EnableDisableContextMenuOptions()
+    {
+        foreach (var button in contextMenuButtons) {
+            button.interactable = true;
+        }
+        if (currentSlot.itemData.Type == ItemData.ItemType.Consumable) {
+            foreach(var button in contextMenuButtons) {
+                if (button.name == "Equip Button") {
                     button.interactable = false;
                 }
             }
         }
+        else if (currentSlot.itemData.Type == ItemData.ItemType.Weapon) {
+            foreach(var button in contextMenuButtons) {
+                if (button.name == "Use Button") {
+                    button.interactable = false;
+                }
+                if (button.name == "Discard Button") {
+                    button.interactable = false;
+                }
+            }
+        }
+        else if (currentSlot.itemData.Type == ItemData.ItemType.KeyItem) {
+            foreach(var button in contextMenuButtons) {
+                if (button.name == "Equip Button") {
+                    button.interactable = false;
+                }
+                if (button.name == "Discard Button") {
+                    button.interactable = false;
+                }
+            }
+        }
+        foreach (var button in contextMenuButtons) {
+            if (button.interactable) {
+                EventSystem.current.SetSelectedGameObject(button.gameObject);
+                break;
+            }
+        }
     }
+
     public void CloseContextMenu()
     {
         contextMenuObject.SetActive(false);
@@ -70,6 +116,18 @@ public class InventoryViewController : MonoBehaviour
         EventSystem.current.SetSelectedGameObject(currentSlot.gameObject);
         ButtonColorToUnselected(itemSlotButtonDisabledColor);
         state = State.menuOpen;
+    }
+
+    public void OnSlotSelected(ItemSlot selectedSlot) {
+        currentSlot = selectedSlot;
+        itemSlotButton = currentSlot.gameObject.GetComponent<Button>();
+        if (selectedSlot.itemData == null) {
+            itemNameText.ClearMesh();
+            itemDescriptionText.ClearMesh();
+            return;
+        }
+        itemNameText.SetText(selectedSlot.itemData.Name);
+        itemDescriptionText.SetText(selectedSlot.itemData.Description[0]);
     }
 
     public void UseItem() {
@@ -93,17 +151,6 @@ public class InventoryViewController : MonoBehaviour
         foreach (var button in contextMenuIgnore) {
                 button.interactable = true;
         }
-    }
-    public void OnSlotSelected(ItemSlot selectedSlot) {
-        currentSlot = selectedSlot;
-        itemSlotButton = currentSlot.gameObject.GetComponent<Button>();
-        if (selectedSlot.itemData == null) {
-            itemNameText.ClearMesh();
-            itemDescriptionText.ClearMesh();
-            return;
-        }
-        itemNameText.SetText(selectedSlot.itemData.Name);
-        itemDescriptionText.SetText(selectedSlot.itemData.Description[0]);
     }
 
     private void OnEnable() {
@@ -145,6 +192,21 @@ public class InventoryViewController : MonoBehaviour
         fader.FadeFromBlack(0.3f, EventBus.Instance.ResumeGameplay);
     }
 
+    private void CheckMouseOrKeyboardInput() {
+        if (Input.GetButtonDown("Vertical") || Input.GetButtonDown("Horizontal")) {
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
+        }
+        if(Input.GetAxis("Mouse X")<0 || Input.GetAxis("Mouse X")>0){
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
+        }
+        if (Input.GetButtonDown("Submit") && currentButton.name == "Esc Button") {
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
+        }
+    }
+
     private void Update() {
         if (Input.GetKeyDown(KeyCode.Tab)) {
             if (state == State.menuClosed) {
@@ -159,6 +221,7 @@ public class InventoryViewController : MonoBehaviour
         }
 
         else if (state == State.menuOpen) {
+            CheckMouseOrKeyboardInput();
             if (EventSystem.current.currentSelectedGameObject) {
                 currentButton = EventSystem.current.currentSelectedGameObject;
             }
@@ -179,6 +242,18 @@ public class InventoryViewController : MonoBehaviour
                 }
                 else if (state == State.contextMenu) {
                     CloseContextMenu();
+                }
+            }
+        }
+
+        else if (state == State.contextMenu) {
+            CheckMouseOrKeyboardInput();
+            if (EventSystem.current.currentSelectedGameObject) {
+                currentButton = EventSystem.current.currentSelectedGameObject;
+            }
+            if (Input.GetButtonDown("Submit")) {
+                if (currentButton.name == "Use Button") {
+                    UseItem();
                 }
             }
         }

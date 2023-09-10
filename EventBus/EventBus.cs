@@ -31,9 +31,11 @@ public class EventBus : MonoBehaviour
         onGameplayPaused?.Invoke();
     }
     public void ResumeGameplay() {
+        Cursor.lockState = CursorLockMode.Locked;
         onGameplayResumed?.Invoke();
     }
     private void Awake() {
+        Cursor.lockState = CursorLockMode.Locked;
         Instance = this;
     }
 }
