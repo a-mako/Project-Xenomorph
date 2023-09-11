@@ -52,23 +52,26 @@ public class InventoryViewController : MonoBehaviour
         isBusy = false;
     }
 
-    public void CloseMenu() {
-        StartCoroutine(CloseMenuCoroutine(1f));
+    public void CloseMenu(float closeMenuSpeed, Action finishedCallback) {
+        StartCoroutine(CloseMenuCoroutine(closeMenuSpeed, finishedCallback));
     }
 
-    private IEnumerator CloseMenuCoroutine(float duration)
+    private IEnumerator CloseMenuCoroutine(float duration, Action finishedCallback)
     {
         isBusy = true;
         EventBus.Instance.CloseInventory();
         Cursor.visible = false;
-        fader.FadeToBlack(0.3f, FadeFromMenuCallback);
         playerMenuHead.gameObject.SetActive(false);
         state = State.menuClosed;
         currentSlot = null;
         itemNameText.SetText("");
         itemDescriptionText.SetText("");
         Cursor.lockState = CursorLockMode.None;
+
+        finishedCallback?.Invoke();
+
         yield return new WaitForSeconds(duration);
+
         isBusy = false;
 
     }
@@ -188,15 +191,17 @@ public class InventoryViewController : MonoBehaviour
             currentSlot.itemData = null;
         }
         StartCoroutine(CloseContextMenuCoroutine(1f));
-        CloseMenu();
+        CloseMenu(1f, () => fader.FadeFromBlack(0.3f, null));
+        inventoryViewObject.SetActive(false);
         ButtonColorToUnselected(itemSlotButtonDisabledColor);
     }
-
-    private void OnEnable() {
-        EventBus.Instance.onPickUpItem += OnItemPickedUp;
+    private void FadeToMenuCallback() {
+        inventoryViewObject.SetActive(true);
+        fader.FadeFromBlack(0.3f, null);
     }
-    private void OnDisable() {
-        EventBus.Instance.onPickUpItem -= OnItemPickedUp;
+    private void FadeFromMenuCallback() {
+        inventoryViewObject.SetActive(false);
+        fader.FadeFromBlack(0.3f, EventBus.Instance.ResumeGameplay);
     }
 
     private void OnItemPickedUp(ItemData itemData)
@@ -222,15 +227,6 @@ public class InventoryViewController : MonoBehaviour
         itemSlotButton.colors = itemSlotButtonColor;
     }
 
-    private void FadeToMenuCallback() {
-        inventoryViewObject.SetActive(true);
-        fader.FadeFromBlack(0.3f, null);
-    }
-    private void FadeFromMenuCallback() {
-        inventoryViewObject.SetActive(false);
-        fader.FadeFromBlack(0.3f, EventBus.Instance.ResumeGameplay);
-    }
-
     private void CheckMouseOrKeyboardInput() {
         if (Input.GetButtonDown("Vertical") || Input.GetButtonDown("Horizontal")) {
             Cursor.visible = false;
@@ -246,16 +242,23 @@ public class InventoryViewController : MonoBehaviour
         }
     }
 
+    private void OnEnable() {
+        EventBus.Instance.onPickUpItem += OnItemPickedUp;
+    }
+    private void OnDisable() {
+        EventBus.Instance.onPickUpItem -= OnItemPickedUp;
+    }
+
     private void Update() {
         if (Input.GetKeyDown(KeyCode.Tab)) {
-            Debug.Log("state: " + state + " | isBusy: " + isBusy);
+            // Debug.Log("state: " + state + " | isBusy: " + isBusy);
             if (isBusy) return;
 
             else if (state == State.menuClosed) {
                 OpenMenu();
             }
             else if (state == State.menuOpen) {
-                CloseMenu();
+                CloseMenu(.8f, () => fader.FadeToBlack(0.3f, FadeFromMenuCallback));
             }
             else if (state == State.contextMenu) {
                 CloseContextMenu();
@@ -272,13 +275,13 @@ public class InventoryViewController : MonoBehaviour
                     EventSystem.current.SetSelectedGameObject(currentButton);
                 }
                 if (currentButton.name == "Esc Button") {
-                    CloseMenu();
+                    CloseMenu(.8f, () => fader.FadeToBlack(0.3f, FadeFromMenuCallback));
                 }
                 OpenContextMenu();
             }
             else if (Input.GetButtonDown("Cancel")) {
                 if (state == State.menuOpen) {
-                    CloseMenu();
+                    CloseMenu(.8f, () => fader.FadeToBlack(0.3f, FadeFromMenuCallback));
 
                 }
                 else if (state == State.contextMenu) {

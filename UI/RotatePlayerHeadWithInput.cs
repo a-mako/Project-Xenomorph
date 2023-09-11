@@ -7,6 +7,15 @@ using UnityEngine.EventSystems;
 public class RotatePlayerHeadWithInput : MonoBehaviour
 {
     [SerializeField] private float speed = 5f;
+    private Quaternion initRotation;
+
+    private void Awake() {
+        initRotation = transform.rotation;
+    }
+
+    private void OnDisable() {
+        transform.rotation = initRotation;
+    }
     private void Update()
     {
         if (gameObject.activeSelf && EventSystem.current.currentSelectedGameObject != null) {
@@ -21,11 +30,11 @@ public class RotatePlayerHeadWithInput : MonoBehaviour
                 speed = 5f;
             }
 
-            // The step size is equal to speed times frame time.
-            float singleStep = speed * Time.deltaTime;
+            // The max radians is equal to speed times frame time.
+            float maxRadians = speed * Time.deltaTime;
 
             // Rotate the forward vector towards the target direction by one step
-            Vector3 newDirection = Vector3.RotateTowards(transform.forward, targetDirection, singleStep, 0.0f);
+            Vector3 newDirection = Vector3.RotateTowards(transform.forward, targetDirection, maxRadians, 0.0f);
 
             // Draw a ray pointing at our target in
             Debug.DrawRay(transform.position, newDirection, Color.red);

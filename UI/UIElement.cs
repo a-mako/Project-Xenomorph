@@ -13,11 +13,13 @@ public class UIElement : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (button.interactable) {
+            Debug.Log("On Pointer Enter");
             EventSystem.current.SetSelectedGameObject(button.gameObject);
         }
     }
     public void OnPointerExit(PointerEventData eventData)
     {
+        Debug.Log("On Pointer Exit");
         EventSystem.current.SetSelectedGameObject(null);
     }
 
