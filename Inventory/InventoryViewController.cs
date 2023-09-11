@@ -24,6 +24,7 @@ public class InventoryViewController : MonoBehaviour
     [SerializeField] private List<Button> contextMenuButtons;
     private Button itemSlotButton;
     private Color itemSlotButtonDisabledColor = new Color(0.784f, 0.784f, 0.784f, 0.502f);
+    private bool isBusy;
 
     private enum State {
         menuClosed,
@@ -34,6 +35,12 @@ public class InventoryViewController : MonoBehaviour
     private State state;
 
     public void OpenMenu() {
+        StartCoroutine(OpenMenuCoroutine(0.7f));
+    }
+
+    private IEnumerator OpenMenuCoroutine(float duration)
+    {
+        isBusy = true;
         EventBus.Instance.PauseGameplay();
         EventBus.Instance.OpenInventory();
         fader.FadeToBlack(0.3f, FadeToMenuCallback);
@@ -41,8 +48,17 @@ public class InventoryViewController : MonoBehaviour
         EventSystem.current.SetSelectedGameObject(itemSlots[0].gameObject);
         OnSlotSelected(itemSlots[0]);
         state = State.menuOpen;
+        yield return new WaitForSeconds(duration);
+        isBusy = false;
     }
+
     public void CloseMenu() {
+        StartCoroutine(CloseMenuCoroutine(1f));
+    }
+
+    private IEnumerator CloseMenuCoroutine(float duration)
+    {
+        isBusy = true;
         EventBus.Instance.CloseInventory();
         Cursor.visible = false;
         fader.FadeToBlack(0.3f, FadeFromMenuCallback);
@@ -52,11 +68,20 @@ public class InventoryViewController : MonoBehaviour
         itemNameText.SetText("");
         itemDescriptionText.SetText("");
         Cursor.lockState = CursorLockMode.None;
+        yield return new WaitForSeconds(duration);
+        isBusy = false;
+
     }
 
     public void OpenContextMenu() {
+        StartCoroutine(OpenContextMenuCoroutine(0.3f));
+    }
+
+    private IEnumerator OpenContextMenuCoroutine(float duration)
+    {
         if (EventSystem.current.currentSelectedGameObject.TryGetComponent<ItemSlot> (out var slot)) {
             if (currentSlot.itemData != null) {
+                isBusy = true;
                 state = State.contextMenu;
                 contextMenuObject.SetActive(true);
                 ButtonColorToSelected(Color.red);
@@ -64,8 +89,29 @@ public class InventoryViewController : MonoBehaviour
                     button.interactable = false;
                 }
                 EnableDisableContextMenuOptions();
+                yield return new WaitForSeconds(duration);
+                isBusy = false;
             }
         }
+    }
+
+    public void CloseContextMenu()
+    {
+        StartCoroutine(CloseContextMenuCoroutine(0.01f));
+    }
+
+    private IEnumerator CloseContextMenuCoroutine(float duration)
+    {
+        isBusy = true;
+        contextMenuObject.SetActive(false);
+        foreach (var button in contextMenuIgnore) {
+                button.interactable = true;
+        }
+        EventSystem.current.SetSelectedGameObject(currentSlot.gameObject);
+        ButtonColorToUnselected(itemSlotButtonDisabledColor);
+        state = State.menuOpen;
+        yield return new WaitForSeconds(duration);
+        isBusy = false;
     }
 
     private void EnableDisableContextMenuOptions()
@@ -108,17 +154,6 @@ public class InventoryViewController : MonoBehaviour
         }
     }
 
-    public void CloseContextMenu()
-    {
-        contextMenuObject.SetActive(false);
-        foreach (var button in contextMenuIgnore) {
-                button.interactable = true;
-        }
-        EventSystem.current.SetSelectedGameObject(currentSlot.gameObject);
-        ButtonColorToUnselected(itemSlotButtonDisabledColor);
-        state = State.menuOpen;
-    }
-
     public void OnSlotSelected(ItemSlot selectedSlot) {
         currentSlot = selectedSlot;
         itemSlotButton = currentSlot.gameObject.GetComponent<Button>();
@@ -132,16 +167,27 @@ public class InventoryViewController : MonoBehaviour
     }
 
     public void UseItem() {
-        fader.FadeToBlack(1f, FadeToUseItemCallback);
-        
+        foreach (var button in contextMenuButtons) {
+            button.interactable = false;
+        }
+        StartCoroutine(UseItemCoroutine(0.1f)); 
     }
+
+    private IEnumerator UseItemCoroutine(float duration)
+    {
+        isBusy = true;
+        
+        yield return new WaitForSeconds(duration);
+        fader.FadeToBlack(1f, FadeToUseItemCallback);
+    }
+
     public void FadeToUseItemCallback() {
         EventBus.Instance.UseItem(currentSlot.itemData);
         EventSystem.current.SetSelectedGameObject(currentSlot.gameObject);
         if (currentSlot.itemData.Type == ItemData.ItemType.Consumable) {
             currentSlot.itemData = null;
         }
-        CloseContextMenu();
+        StartCoroutine(CloseContextMenuCoroutine(1f));
         CloseMenu();
         ButtonColorToUnselected(itemSlotButtonDisabledColor);
     }
@@ -202,7 +248,10 @@ public class InventoryViewController : MonoBehaviour
 
     private void Update() {
         if (Input.GetKeyDown(KeyCode.Tab)) {
-            if (state == State.menuClosed) {
+            Debug.Log("state: " + state + " | isBusy: " + isBusy);
+            if (isBusy) return;
+
+            else if (state == State.menuClosed) {
                 OpenMenu();
             }
             else if (state == State.menuOpen) {

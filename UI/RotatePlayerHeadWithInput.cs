@@ -9,7 +9,7 @@ public class RotatePlayerHeadWithInput : MonoBehaviour
     [SerializeField] private float speed = 5f;
     private void Update()
     {
-        if (gameObject.activeSelf) {
+        if (gameObject.activeSelf && EventSystem.current.currentSelectedGameObject != null) {
             // Determine which direction to rotate towards
             Vector3 targetDirection;
             if (Cursor.lockState.Equals(CursorLockMode.Locked)) {
