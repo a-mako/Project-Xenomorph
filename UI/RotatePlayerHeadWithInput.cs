@@ -14,7 +14,7 @@ public class RotatePlayerHeadWithInput : MonoBehaviour
             Vector3 targetDirection;
             if (Cursor.lockState.Equals(CursorLockMode.Locked)) {
                 targetDirection = EventSystem.current.currentSelectedGameObject.transform.position - transform.position;
-                speed = 2f;
+                speed = .5f;
             }
             else {
                 targetDirection = Input.mousePosition - transform.position;

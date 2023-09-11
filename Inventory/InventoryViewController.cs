@@ -136,22 +136,14 @@ public class InventoryViewController : MonoBehaviour
         
     }
     public void FadeToUseItemCallback() {
-        contextMenuObject.SetActive(false);
-        inventoryViewObject.SetActive(false);
-        FadeFromMenuCallback();
-        ButtonColorToUnselected(itemSlotButtonDisabledColor);
         EventBus.Instance.UseItem(currentSlot.itemData);
         EventSystem.current.SetSelectedGameObject(currentSlot.gameObject);
         if (currentSlot.itemData.Type == ItemData.ItemType.Consumable) {
             currentSlot.itemData = null;
         }
-        itemNameText.SetText("");
-        itemDescriptionText.SetText("");
-        state = State.menuClosed;
-        EventSystem.current.SetSelectedGameObject(null);
-        foreach (var button in contextMenuIgnore) {
-                button.interactable = true;
-        }
+        CloseContextMenu();
+        CloseMenu();
+        ButtonColorToUnselected(itemSlotButtonDisabledColor);
     }
 
     private void OnEnable() {
@@ -198,7 +190,7 @@ public class InventoryViewController : MonoBehaviour
             Cursor.visible = false;
             Cursor.lockState = CursorLockMode.Locked;
         }
-        if(Input.GetAxis("Mouse X")<0 || Input.GetAxis("Mouse X")>0){
+        if(Input.GetAxis("Mouse X") < 0 || Input.GetAxis("Mouse X") > 0){
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.Confined;
         }
