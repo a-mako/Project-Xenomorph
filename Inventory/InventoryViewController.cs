@@ -14,11 +14,11 @@ public class InventoryViewController : MonoBehaviour
     [SerializeField] private GameObject inventoryViewObject;
     [SerializeField] private GameObject contextMenuObject;
     [SerializeField] private GameObject currentButton;
+    [SerializeField] private GameObject playerMenuHead;
     [SerializeField] private TMP_Text itemNameText;
     [SerializeField] private TMP_Text itemDescriptionText;
     [SerializeField] private ItemSlot currentSlot;
     [SerializeField] private ScreenFader fader;
-    [SerializeField] private Camera playerSelfieCamera;
     [SerializeField] private List<ItemSlot> itemSlots;
     [SerializeField] private List<Button> contextMenuIgnore;
     [SerializeField] private List<Button> contextMenuButtons;
@@ -35,16 +35,18 @@ public class InventoryViewController : MonoBehaviour
 
     public void OpenMenu() {
         EventBus.Instance.PauseGameplay();
+        EventBus.Instance.OpenInventory();
         fader.FadeToBlack(0.3f, FadeToMenuCallback);
-        playerSelfieCamera.gameObject.SetActive(true);
+        playerMenuHead.gameObject.SetActive(true);
         EventSystem.current.SetSelectedGameObject(itemSlots[0].gameObject);
         OnSlotSelected(itemSlots[0]);
         state = State.menuOpen;
     }
     public void CloseMenu() {
+        EventBus.Instance.CloseInventory();
         Cursor.visible = false;
         fader.FadeToBlack(0.3f, FadeFromMenuCallback);
-        playerSelfieCamera.gameObject.SetActive(false);
+        playerMenuHead.gameObject.SetActive(false);
         state = State.menuClosed;
         currentSlot = null;
         itemNameText.SetText("");
@@ -56,7 +58,6 @@ public class InventoryViewController : MonoBehaviour
         if (EventSystem.current.currentSelectedGameObject.TryGetComponent<ItemSlot> (out var slot)) {
             if (currentSlot.itemData != null) {
                 state = State.contextMenu;
-                Debug.Log("Open Context Menu");
                 contextMenuObject.SetActive(true);
                 ButtonColorToSelected(Color.red);
                 foreach (var button in contextMenuIgnore) {
@@ -199,7 +200,7 @@ public class InventoryViewController : MonoBehaviour
         }
         if(Input.GetAxis("Mouse X")<0 || Input.GetAxis("Mouse X")>0){
             Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
+            Cursor.lockState = CursorLockMode.Confined;
         }
         if (Input.GetButtonDown("Submit") && currentButton.name == "Esc Button") {
             Cursor.visible = false;
@@ -227,7 +228,6 @@ public class InventoryViewController : MonoBehaviour
             }
             if (Input.GetButtonDown("Submit")) {
                 if (EventSystem.current.currentSelectedGameObject == null) {
-                    Debug.Log("currentSelectedGameObject is null");
                     EventSystem.current.SetSelectedGameObject(currentButton);
                 }
                 if (currentButton.name == "Esc Button") {
