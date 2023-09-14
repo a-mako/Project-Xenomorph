@@ -150,7 +150,7 @@ public class InventoryViewController : MonoBehaviour
             }
         }
         foreach (var button in contextMenuButtons) {
-            if (button.interactable) {
+            if (button.interactable && Cursor.lockState == CursorLockMode.Locked) {
                 EventSystem.current.SetSelectedGameObject(button.gameObject);
                 break;
             }
@@ -231,8 +231,23 @@ public class InventoryViewController : MonoBehaviour
         if (Input.GetButtonDown("Vertical") || Input.GetButtonDown("Horizontal")) {
             Cursor.visible = false;
             Cursor.lockState = CursorLockMode.Locked;
+            if (EventSystem.current.currentSelectedGameObject == null && state == State.menuOpen) {
+                EventSystem.current.SetSelectedGameObject(itemSlots[0].gameObject);
+            }
+            else if (EventSystem.current.currentSelectedGameObject == null && state == State.contextMenu) {
+                foreach (var button in contextMenuButtons) {
+                    if (button.interactable) {
+                        EventSystem.current.SetSelectedGameObject(button.gameObject);
+                        break;
+                    }
+                }
+            }
         }
         if(Input.GetAxis("Mouse X") < 0 || Input.GetAxis("Mouse X") > 0){
+            int middleOfScreenX = Screen.width / 2;
+            if (Input.mousePosition.x == middleOfScreenX) {
+                EventSystem.current.SetSelectedGameObject(null);
+            }
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.Confined;
         }
@@ -269,24 +284,15 @@ public class InventoryViewController : MonoBehaviour
             CheckMouseOrKeyboardInput();
             if (EventSystem.current.currentSelectedGameObject) {
                 currentButton = EventSystem.current.currentSelectedGameObject;
+                if (Input.GetButtonDown("Submit")) {
+                    if (EventSystem.current.currentSelectedGameObject == null) {
+                        EventSystem.current.SetSelectedGameObject(currentButton);
+                    }
+                    OpenContextMenu();
+                }
             }
-            if (Input.GetButtonDown("Submit")) {
-                if (EventSystem.current.currentSelectedGameObject == null) {
-                    EventSystem.current.SetSelectedGameObject(currentButton);
-                }
-                if (currentButton.name == "Esc Button") {
-                    CloseMenu(.8f, () => fader.FadeToBlack(0.3f, FadeFromMenuCallback));
-                }
-                OpenContextMenu();
-            }
-            else if (Input.GetButtonDown("Cancel")) {
-                if (state == State.menuOpen) {
-                    CloseMenu(.8f, () => fader.FadeToBlack(0.3f, FadeFromMenuCallback));
-
-                }
-                else if (state == State.contextMenu) {
-                    CloseContextMenu();
-                }
+            if (Input.GetButtonDown("Cancel")) {
+                CloseMenu(.8f, () => fader.FadeToBlack(0.3f, FadeFromMenuCallback));
             }
         }
 
@@ -294,11 +300,14 @@ public class InventoryViewController : MonoBehaviour
             CheckMouseOrKeyboardInput();
             if (EventSystem.current.currentSelectedGameObject) {
                 currentButton = EventSystem.current.currentSelectedGameObject;
-            }
-            if (Input.GetButtonDown("Submit")) {
-                if (currentButton.name == "Use Button") {
-                    UseItem();
+                if (Input.GetButtonDown("Submit") && currentButton) {
+                    if (currentButton.name == "Use Button") {
+                        UseItem();
+                    }
                 }
+            }
+            if (Input.GetButtonDown("Cancel")) {
+                CloseContextMenu();
             }
         }
     }
