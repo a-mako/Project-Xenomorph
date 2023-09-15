@@ -78,4 +78,10 @@ crashlytics-build.properties
 *.meta
 *.cs.meta
 
+<<<<<<< HEAD
+=======
+# System files
+[Ss]ystem/*
+
+>>>>>>> 2a192a7 (gitignore system folder)
 # End of https://www.toptal.com/developers/gitignore/api/unity
